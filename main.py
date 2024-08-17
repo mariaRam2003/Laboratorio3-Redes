@@ -1,17 +1,29 @@
 from Config_Loader import NetworkConfiguration
+from Flooding import Flooding
+from dotenv import load_dotenv
+import os
+import asyncio
+import logging
 
 def main():
+    # Load the .env file
+    load_dotenv()
+
+    # Load the network configuration
     config = NetworkConfiguration('files/topo2024-randomX-2024.txt', 'files/names2024-randomX-2024.txt')
     print(config)
 
-    # Get neighbors of node 'A'
-    print(config.get_neighbors('A'))
+    # Get the environment variables
+    jid = os.getenv("JID")
+    password = os.getenv("PASSWORD")
 
-    print()
+    # Logging configuration
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+    
+    xmpp = Flooding(jid, password, config)
 
-    # Get name of node 'A'
-    print(config.get_node_name('A'))
-
+    xmpp.connect()
+    xmpp.process(forever=False)
 
 if __name__ == "__main__":
     main()

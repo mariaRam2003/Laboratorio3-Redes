@@ -1,1 +1,1 @@
-{'type':'names', 'config':{'A': 'woot@alumchat.lol', 'B': 'bar@alumchat.lol', 'C': 'foo@alumchat.lol', 'D': 'omg@alumchat.lol', 'E': 'lol@alumchat.lol', 'F': 'swag@alumchat.lol', 'G': 'yeet@alumchat.lol'} }
+{'type':'names', 'config':{'A': 'lei21752-test2@alumchat.lol', 'B': 'echobot@alumchat.lol'} }
