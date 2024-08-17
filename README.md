@@ -16,6 +16,6 @@
 https://github.com/mariaRam2003/Laboratorio3-Redes.git
 
 
-## Avances
-Carga de archivos de configuracion de red\
-![alt text](image.png)
+
+## Historial de Commits
+![alt text](image-1.png)
