@@ -5,6 +5,7 @@ import os
 import asyncio
 import logging
 
+
 def main():
     # Load the .env file
     load_dotenv()
@@ -17,13 +18,18 @@ def main():
     jid = os.getenv("JID")
     password = os.getenv("PASSWORD")
 
+    print("jid: ", jid)
+    print("pw: ", password)
+    print()
+
     # Logging configuration
-    logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
-    
+    # logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+
     xmpp = Flooding(jid, password, config)
 
-    xmpp.connect()
+    xmpp.connect(disable_starttls=True, use_ssl=False)
     xmpp.process(forever=False)
+
 
 if __name__ == "__main__":
     main()

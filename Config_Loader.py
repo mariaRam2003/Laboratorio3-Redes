@@ -2,12 +2,14 @@ import json
 import os
 import re
 
+
 class NetworkConfiguration:
     """
     A class to represent a network configuration.
     Attributes:
     - topology (dict): A dictionary representing the network topology.
     - node_names (dict): A dictionary representing the names of the nodes.
+    - jid_node_map (dict) : This dictionary is the same as node names, but has the node names as values instead of keys
     Methods:
     - load_topology(topo_file): Loads a topology file.
     - load_names(names_file): Loads a names file.
@@ -17,12 +19,22 @@ class NetworkConfiguration:
     - get_node_name(node_id): Retrieves the name of a node based on its ID.
     - __str__(): Returns a string representation of the object.
     """
+
     def __init__(self, topo_file, names_file):
         self.topology = {}
         self.node_names = {}
+        self.jid_node_map = {}
         self.load_topology(topo_file)
         self.load_names(names_file)
+        self.load_jid_node_map()
         self.validate_configuration()
+
+    def load_jid_node_map(self):
+        """
+        Reverses the self.node_names map
+        Returns: None
+        """
+        self.jid_node_map = {value: key for key, value in self.node_names.items()}
 
     def load_topology(self, topo_file):
         """
@@ -37,7 +49,7 @@ class NetworkConfiguration:
         """
         if not os.path.exists(topo_file):
             raise FileNotFoundError(f"Topology file '{topo_file}' does not exist.")
-        
+
         with open(topo_file, 'r') as file:
             content = file.read()
             content = self.fix_single_quotes(content)
@@ -57,7 +69,7 @@ class NetworkConfiguration:
         """
         if not os.path.exists(names_file):
             raise FileNotFoundError(f"Names file '{names_file}' does not exist.")
-        
+
         with open(names_file, 'r') as file:
             content = file.read()
             content = self.fix_single_quotes(content)
@@ -121,9 +133,9 @@ class NetworkConfiguration:
         topo_str = "Topology:\n"
         for node, neighbors in self.topology.items():
             topo_str += f"{node} -> {', '.join(neighbors)}\n"
-        
+
         names_str = "Node Names:\n"
         for node_id, node_name in self.node_names.items():
             names_str += f"{node_id}: {node_name}\n"
-        
+
         return topo_str + "\n" + names_str
