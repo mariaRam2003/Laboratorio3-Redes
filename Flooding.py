@@ -1,5 +1,6 @@
 from slixmpp import ClientXMPP
 from Config_Loader import NetworkConfiguration
+from Dijkstra import dijkstra, get_path
 import logging
 import asyncio
 import json
@@ -31,6 +32,10 @@ class Flooding(ClientXMPP):
                 'version': 0
             }
         }
+
+        # dijkstra results
+        self.dijkstra_distances = None
+        self.dijkstra_sortest_path = None
 
     def _send_echo_message(self):
         echo_msg = '{\"type\": \"echo\"}'
@@ -81,13 +86,51 @@ class Flooding(ClientXMPP):
             self.broadcast_weight(self.my_id)
 
         elif msg_type == 'weights':
-            pass
+            table = body['table']
+            version = body['version']
+            user = body['from']
+            node_id = self.config.jid_node_map[user]
+
+            if not (self._weights[node_id]) or (self._weights[node_id]['version'] < version):
+                self._weights[node_id] = {
+                    'table': table,
+                    'version': version
+                }
+                self.broadcast_weight(node_id)
+
+                pre_processed_table = self.pre_process_table()
+
+                self.dijkstra_distances, self.dijkstra_sortest_path = dijkstra(pre_processed_table, self.my_id)
 
         elif msg_type == 'send_routing':
-            pass
+            destiny = body['to']
+            sender = body['from']
+            data = body['data']
+            hops = body['hops']
+
+            path = get_path(destiny, self.my_id, self.dijkstra_sortest_path)
+            next_step_id = path[0]
+            reciever_jid = self.config.node_names[next_step_id]
+
+            if destiny not in self.my_neighbors:
+                string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+                return
+
+            string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
+            self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
 
         elif msg_type == 'message':
-            pass
+            print("Message has been recieved!")
+            print("from: ", body['from'])
+            print("message: ", body['data'])
+
+    def pre_process_table(self):
+        new_dict = {}
+        for node_id, table_dict in self._weights.items():
+            new_dict[node_id] = table_dict['table']
+
+        return new_dict
 
     def broadcast_weight(self, node_id):
         """
@@ -105,22 +148,10 @@ class Flooding(ClientXMPP):
         version = self._weights[node_id]['version']
         table_jid = self.config.node_names[node_id]
 
-        string = f'{{\"type\": \"weights\", \"table\": {{ {json_table} }} }}, \"version\": {version}, \"from\": \"{table_jid}\"'
+        string = f'{{\"type\": \"weights\", \"table\": {{ {json_table} }}, \"version\": {version}, \"from\": \"{table_jid}\" }}'
 
         # we broadcast to all our neighbors
         for neighbor_id in self.my_neighbors:
             neighbor_jid = self.config.node_names[neighbor_id]
             self.send_message(mto=neighbor_jid, mbody=string, mtype='chat')
 
-    def flood_message(self, message, origin):
-        self.logger.info(f"Flooding message from {origin}: {message}")
-        for node in self.config.get_neighbors(self.boundjid.bare):
-            if node != origin:
-                self.logger.debug(f"Sending message to {node}")
-                self.send_message(mto=node, mbody=message, mtype='chat')
-
-    def send_flood_message(self, message):
-        self.logger.info(f"Sending flood message: {message}")
-        for node in self.config.get_neighbors(self.boundjid.bare):
-            self.logger.debug(f"Sending message to {node}")
-            self.send_message(mto=node, mbody=message, mtype='chat')
