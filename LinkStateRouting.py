@@ -140,7 +140,19 @@ class LinkStateRouting(ClientXMPP):
                 user = body['from']
                 node_id = self.config.jid_node_map[user]
 
-                if not (self._weights[node_id]) or (self._weights[node_id]['version'] < version):
+                if node_id not in self._weights:
+                    self._weights[node_id] = {
+                        'table': table,
+                        'version': version
+                    }
+                    self.broadcast_weight(node_id)
+
+                    pre_processed_table = self.pre_process_table()
+
+                    self.dijkstra_distances, self.dijkstra_sortest_path = dijkstra(pre_processed_table, self.my_id)
+                    return
+
+                if self._weights[node_id]['version'] < version:
                     self._weights[node_id] = {
                         'table': table,
                         'version': version
@@ -174,6 +186,7 @@ class LinkStateRouting(ClientXMPP):
                 print("Message has been recieved!")
                 print("from: ", body['from'])
                 print("message: ", body['data'])
+
         except KeyError as e:
             print("Recieved message is not correctly formated: ")
             print(body)
