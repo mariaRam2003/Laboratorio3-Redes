@@ -1,9 +1,13 @@
+import asyncio
+
 from slixmpp import ClientXMPP
 from Config_Loader import NetworkConfiguration
 from Dijkstra import dijkstra, get_path
 import logging
-import asyncio
+from aioconsole import ainput
+from asyncio import sleep
 import json
+from json import JSONDecodeError
 import time
 
 
@@ -37,6 +41,25 @@ class Flooding(ClientXMPP):
         self.dijkstra_distances = None
         self.dijkstra_sortest_path = None
 
+    async def handle_send_message(self):
+        await sleep(5)
+        print(self._weights)
+        print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
+        destiny_id = await ainput("Ingrese el nodo destino: ")
+        data = await ainput("Ingrese el mensaje: ")
+        sender = self.my_id
+
+        reciever_jid = self.config.node_names[destiny_id]
+        hops = 0
+
+        if destiny_id not in self.my_neighbors:
+            string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+            self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+            return
+
+        string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
+        self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+
     def _send_echo_message(self):
         echo_msg = '{\"type\": \"echo\"}'
         for neighbor_id in self.my_neighbors:
@@ -52,6 +75,7 @@ class Flooding(ClientXMPP):
         self.send_presence()
         await self.get_roster()
         self._send_echo_message()
+        await asyncio.create_task(self.handle_send_message())
 
     async def message(self, msg):
         if msg['type'] not in ('chat', 'normal'):
@@ -64,8 +88,17 @@ class Flooding(ClientXMPP):
         sender_jid = sender.split("/")[0]
 
         body = msg['body']
-        # TODO: We must add a try catch here
-        body = json.loads(body)  # We turn the string into a dictionary
+
+        try:
+            body = json.loads(body)  # We turn the string into a dictionary
+        except JSONDecodeError as e:
+            print(f"ERROR: {sender_jid}'s message is NOT JSON compliant!")
+            print("MESSAGE:\n~~~~~~~~~~~~~~~~~~~~~~~")
+            print(body)
+            print('\n~~~~~~~~~~~~~~~~~~~~~~~')
+
+            return
+
         msg_type = body['type']
 
         if msg_type == 'echo':
@@ -103,6 +136,7 @@ class Flooding(ClientXMPP):
                 self.dijkstra_distances, self.dijkstra_sortest_path = dijkstra(pre_processed_table, self.my_id)
 
         elif msg_type == 'send_routing':
+            # TODO: the protocol doesnt specify if the destiny and sender should be node id or jid
             destiny = body['to']
             sender = body['from']
             data = body['data']
@@ -154,4 +188,3 @@ class Flooding(ClientXMPP):
         for neighbor_id in self.my_neighbors:
             neighbor_jid = self.config.node_names[neighbor_id]
             self.send_message(mto=neighbor_jid, mbody=string, mtype='chat')
-
