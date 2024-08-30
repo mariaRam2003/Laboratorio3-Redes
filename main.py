@@ -1,5 +1,5 @@
 from Config_Loader import NetworkConfiguration
-from Flooding import Flooding
+from LinkStateRouting import LinkStateRouting
 from dotenv import load_dotenv
 import os
 import asyncio
@@ -25,7 +25,7 @@ def main():
     # Logging configuration
     # logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
 
-    xmpp = Flooding(jid, password, config)
+    xmpp = LinkStateRouting(jid, password, config)
 
     xmpp.connect(disable_starttls=True, use_ssl=False)
     xmpp.process(forever=False)

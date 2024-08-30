@@ -11,7 +11,7 @@ from json import JSONDecodeError
 import time
 
 
-class Flooding(ClientXMPP):
+class LinkStateRouting(ClientXMPP):
     def __init__(self, jid, password, config: NetworkConfiguration):
         super().__init__(jid, password)
         # logging
