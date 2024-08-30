@@ -47,22 +47,27 @@ class LinkStateRouting(ClientXMPP):
         Returns: None
         """
         await sleep(5)
-        print(self._weights)
-        print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
-        destiny_id = await ainput("Ingrese el nodo destino: ")
-        data = await ainput("Ingrese el mensaje: ")
-        sender = self.my_id
+        while True:
+            print(self._weights)
+            print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
+            destiny_id = await ainput("Ingrese el nodo destino: ")
+            data = await ainput("Ingrese el mensaje: ")
+            sender = self.my_id
 
-        reciever_jid = self.config.node_names[destiny_id]
-        hops = 0
+            if destiny_id not in self.config.node_names:
+                print("ERROR: el nodo destino no es parte de la topologia")
+                return
 
-        if destiny_id not in self.my_neighbors:
-            string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+            reciever_jid = self.config.node_names[destiny_id]
+            hops = 0
+
+            if destiny_id not in self.my_neighbors:
+                string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+                return
+
+            string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
             self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
-            return
-
-        string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
-        self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
 
     def _send_echo_message(self):
         """This message handles sending the echo messages"""
