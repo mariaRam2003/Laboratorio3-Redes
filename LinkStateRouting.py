@@ -12,10 +12,30 @@ import time
 
 
 class LinkStateRouting(ClientXMPP):
+    """
+    This class is the main class for the Link State Routing protocol
+
+    Args:
+        jid: the jid of the user
+        password: the password of the user
+        config: the NetworkConfiguration object that contains the network
+
+    Attributes:
+        logger: the logger object
+        sent_messages: a set containing the messages that have been sent
+        config: the NetworkConfiguration object that contains the network
+        my_jid: the jid of the user
+        my_id: the id of the user
+        my_neighbors: the neighbors of the user
+        response_times: a dictionary containing the time the echo message was sent
+        _weights: a dictionary containing the weights of the user
+        dijkstra_distances: the distances from the user to all the nodes
+        dijkstra_sortest_path: the shortest path from the user to all the nodes
+    """
     def __init__(self, jid, password, config: NetworkConfiguration):
         super().__init__(jid, password)
-        print(f"LSR initialized for JID: {jid}")
-        print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
+        print(f"LSR initialized for JID: {jid}\n")
+        print("INFO: Please make sure the topology is complete before sending a message\n")
         # logging
         self.logger = logging.getLogger(__name__)
 
@@ -51,13 +71,13 @@ class LinkStateRouting(ClientXMPP):
         await sleep(5)
         while True:
             print("Current weights table:")
-            print(self._weights)
-            destiny_id = await ainput("Ingrese el nodo destino: ")
-            data = await ainput("Ingrese el mensaje: ")
+            print(f"\t{self._weights}")
+            destiny_id = await ainput("Enter destination Node: ")
+            data = await ainput("Enter the message: ")
             sender = self.my_id
 
             if destiny_id not in self.config.node_names:
-                print("ERROR: el nodo destino no es parte de la topologia")
+                print("ERROR: The destination node is not in the network\n")
                 return
 
             reciever_jid = self.config.node_names[destiny_id]
@@ -70,27 +90,42 @@ class LinkStateRouting(ClientXMPP):
 
             string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
             self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
-            print(f"Message sent to {reciever_jid} from {self.my_id} with data: {data}")
+            print(f"Message sent to {reciever_jid} from {self.my_id} with data: {data}\n")
 
 
     def _send_echo_message(self):
-        """This message handles sending the echo messages"""
+        """
+        This message handles sending the echo messages
+
+        Returns: None
+        """
         echo_msg = '{\"type\": \"echo\"}'
         for neighbor_id in self.my_neighbors:
             neighbor_jid = self.config.node_names[neighbor_id]
             self.send_message(mto=neighbor_jid, mbody=echo_msg, mtype='chat')
             self.response_times[neighbor_jid] = time.time()
-            print(f"Sending echo message to neighbor: {neighbor_jid}")
+            print(f"Sending echo message to neighbor: {neighbor_jid}\n")
 
 
     def _add_event_handlers(self):
-        """We add the event handlers"""
+        """
+        We add the event handlers
+
+        Returns: None
+        """
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('message', self.message)
 
     async def start(self, event):
-        """Function run on session start"""
-        print("Session started, sending presence and getting roster...")
+        """
+        Function run on session start
+
+        Args:
+            event: the event object
+
+        Returns: None
+        """
+        print("Session started, sending presence and getting roster...\n")
         self.send_presence()
         await self.get_roster()
         self._send_echo_message()
@@ -102,8 +137,8 @@ class LinkStateRouting(ClientXMPP):
         and handles all the cases defined by the protocol
         """
         if msg['type'] not in ('chat', 'normal'):
-            print("unknown message type")
-            print("msg body: \n", msg['body'])
+            print("Unknown message type: ")
+            print(f"\tmsg body: {msg['body']}\n")
             return
         
         # Message's sender.
@@ -112,15 +147,16 @@ class LinkStateRouting(ClientXMPP):
 
         body = msg['body']
 
-        print(f"Message received from {sender_jid} with body: {body}")
+        print(f"Message received from {sender_jid} with body: {body}\n")
 
         try:
             body = json.loads(body)  # We turn the string into a dictionary
         except JSONDecodeError as e:
             print(f"ERROR: {sender_jid}'s message is NOT JSON compliant!")
-            print("MESSAGE:\n~~~~~~~~~~~~~~~~~~~~~~~")
-            print(body)
-            print('\n~~~~~~~~~~~~~~~~~~~~~~~')
+            print("\tMESSAGE:")
+            print("\t~~~~~~~~~~~~~~~~~~~~~~~")
+            print(f"\t{body}")
+            print('\t~~~~~~~~~~~~~~~~~~~~~~~')
             return
 
         try:
@@ -192,18 +228,18 @@ class LinkStateRouting(ClientXMPP):
                 self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
 
             elif msg_type == 'message':
-                print("Message has been recieved!")
-                print("from: ", body['from'])
-                print("message: ", body['data'])
+                print("A Message has been recieved:")
+                print(f"\tfrom: {body['from']}")
+                print(f"\tmessage: {body['data']}")
 
         except KeyError as e:
-            print("Recieved message is not correctly formated: ")
-            print(body)
+            print("ERROR: Recieved message is not correctly formated: \n")
+            print(f"\t{body}")
 
     def pre_process_table(self):
         """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
         new_dict = {}
-        print("Preprocessing table for Dijkstra's algorithm...")
+        print("Preprocessing table for Dijkstra's algorithm...\n")
         for node_id, table_dict in self._weights.items():
             new_dict[node_id] = table_dict['table']
 
@@ -215,10 +251,10 @@ class LinkStateRouting(ClientXMPP):
             node_id: the id of the node table we want to broadcast
         Returns: None
         """
-        print(f"Broadcasting weight for node_id: {node_id} to all neighbors")
+        print(f"Broadcasting weight for node_id: {node_id} to all neighbors\n")
 
         if node_id not in self._weights:
-            print("Couldn't broadcast weight for node id: ", node_id)
+            print(f"ERROR: Couldn't broadcast weight for node id: {node_id}\n")
             return
 
         table = self._weights[node_id]['table']

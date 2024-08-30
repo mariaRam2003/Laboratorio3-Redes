@@ -2,11 +2,18 @@ from Config_Loader import NetworkConfiguration
 from LinkStateRouting import LinkStateRouting
 from dotenv import load_dotenv
 import os
+import platform
 import asyncio
-import logging
 
 
 def main():
+    if platform.system() == 'Windows':
+        # On Windows, the proactor event loop is necessary to listen for
+        # events on stdin while running the asyncio event loop.
+        print("INFO: The current platform is Windows")
+        if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     # Load the .env file
     load_dotenv()
 
