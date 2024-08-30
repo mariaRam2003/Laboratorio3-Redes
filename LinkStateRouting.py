@@ -14,6 +14,8 @@ import time
 class LinkStateRouting(ClientXMPP):
     def __init__(self, jid, password, config: NetworkConfiguration):
         super().__init__(jid, password)
+        print(f"LSR initialized for JID: {jid}")
+        print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
         # logging
         self.logger = logging.getLogger(__name__)
 
@@ -48,8 +50,8 @@ class LinkStateRouting(ClientXMPP):
         """
         await sleep(5)
         while True:
+            print("Current weights table:")
             print(self._weights)
-            print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
             destiny_id = await ainput("Ingrese el nodo destino: ")
             data = await ainput("Ingrese el mensaje: ")
             sender = self.my_id
@@ -68,6 +70,8 @@ class LinkStateRouting(ClientXMPP):
 
             string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
             self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+            print(f"Message sent to {reciever_jid} from {self.my_id} with data: {data}")
+
 
     def _send_echo_message(self):
         """This message handles sending the echo messages"""
@@ -76,6 +80,8 @@ class LinkStateRouting(ClientXMPP):
             neighbor_jid = self.config.node_names[neighbor_id]
             self.send_message(mto=neighbor_jid, mbody=echo_msg, mtype='chat')
             self.response_times[neighbor_jid] = time.time()
+            print(f"Sending echo message to neighbor: {neighbor_jid}")
+
 
     def _add_event_handlers(self):
         """We add the event handlers"""
@@ -84,6 +90,7 @@ class LinkStateRouting(ClientXMPP):
 
     async def start(self, event):
         """Function run on session start"""
+        print("Session started, sending presence and getting roster...")
         self.send_presence()
         await self.get_roster()
         self._send_echo_message()
@@ -98,12 +105,14 @@ class LinkStateRouting(ClientXMPP):
             print("unknown message type")
             print("msg body: \n", msg['body'])
             return
-
+        
         # Message's sender.
         sender = str(msg["from"])
         sender_jid = sender.split("/")[0]
 
         body = msg['body']
+
+        print(f"Message received from {sender_jid} with body: {body}")
 
         try:
             body = json.loads(body)  # We turn the string into a dictionary
@@ -194,6 +203,7 @@ class LinkStateRouting(ClientXMPP):
     def pre_process_table(self):
         """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
         new_dict = {}
+        print("Preprocessing table for Dijkstra's algorithm...")
         for node_id, table_dict in self._weights.items():
             new_dict[node_id] = table_dict['table']
 
@@ -205,6 +215,7 @@ class LinkStateRouting(ClientXMPP):
             node_id: the id of the node table we want to broadcast
         Returns: None
         """
+        print(f"Broadcasting weight for node_id: {node_id} to all neighbors")
 
         if node_id not in self._weights:
             print("Couldn't broadcast weight for node id: ", node_id)
