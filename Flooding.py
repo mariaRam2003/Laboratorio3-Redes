@@ -42,6 +42,10 @@ class Flooding(ClientXMPP):
         self.dijkstra_sortest_path = None
 
     async def handle_send_message(self):
+        """
+        If we were to send a message, this function handles asking the user for a message and destiny
+        Returns: None
+        """
         await sleep(5)
         print(self._weights)
         print("\nWARNING: asegurarse de que la topología este completa antes de mandar un mensaje")
@@ -61,6 +65,7 @@ class Flooding(ClientXMPP):
         self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
 
     def _send_echo_message(self):
+        """This message handles sending the echo messages"""
         echo_msg = '{\"type\": \"echo\"}'
         for neighbor_id in self.my_neighbors:
             neighbor_jid = self.config.node_names[neighbor_id]
@@ -68,16 +73,22 @@ class Flooding(ClientXMPP):
             self.response_times[neighbor_jid] = time.time()
 
     def _add_event_handlers(self):
+        """We add the event handlers"""
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('message', self.message)
 
     async def start(self, event):
+        """Function run on session start"""
         self.send_presence()
         await self.get_roster()
         self._send_echo_message()
         await asyncio.create_task(self.handle_send_message())
 
     async def message(self, msg):
+        """
+        This function is triggered when we get any message
+        and handles all the cases defined by the protocol
+        """
         if msg['type'] not in ('chat', 'normal'):
             print("unknown message type")
             print("msg body: \n", msg['body'])
@@ -96,70 +107,74 @@ class Flooding(ClientXMPP):
             print("MESSAGE:\n~~~~~~~~~~~~~~~~~~~~~~~")
             print(body)
             print('\n~~~~~~~~~~~~~~~~~~~~~~~')
-
             return
 
-        msg_type = body['type']
+        try:
+            msg_type = body['type']
 
-        if msg_type == 'echo':
-            echo_response = '{\"type\": \"echo_response\"}'
-            self.send_message(mto=sender_jid, mbody=echo_response, mtype='chat')
+            if msg_type == 'echo':
+                echo_response = '{\"type\": \"echo_response\"}'
+                self.send_message(mto=sender_jid, mbody=echo_response, mtype='chat')
 
-        elif msg_type == 'echo_response':
-            end_time = time.time()
-            start_time = self.response_times[sender_jid]
-            elapsed = end_time - start_time
+            elif msg_type == 'echo_response':
+                end_time = time.time()
+                start_time = self.response_times[sender_jid]
+                elapsed = end_time - start_time
 
-            # we update the weights
-            sender_id = self.config.jid_node_map[sender_jid]
-            self._weights[self.my_id]['table'][sender_id] = elapsed
-            self._weights[self.my_id]['version'] += 1
+                # we update the weights
+                sender_id = self.config.jid_node_map[sender_jid]
+                self._weights[self.my_id]['table'][sender_id] = elapsed
+                self._weights[self.my_id]['version'] += 1
 
-            # logic for table broadcast
-            self.broadcast_weight(self.my_id)
+                # logic for table broadcast
+                self.broadcast_weight(self.my_id)
 
-        elif msg_type == 'weights':
-            table = body['table']
-            version = body['version']
-            user = body['from']
-            node_id = self.config.jid_node_map[user]
+            elif msg_type == 'weights':
+                table = body['table']
+                version = body['version']
+                user = body['from']
+                node_id = self.config.jid_node_map[user]
 
-            if not (self._weights[node_id]) or (self._weights[node_id]['version'] < version):
-                self._weights[node_id] = {
-                    'table': table,
-                    'version': version
-                }
-                self.broadcast_weight(node_id)
+                if not (self._weights[node_id]) or (self._weights[node_id]['version'] < version):
+                    self._weights[node_id] = {
+                        'table': table,
+                        'version': version
+                    }
+                    self.broadcast_weight(node_id)
 
-                pre_processed_table = self.pre_process_table()
+                    pre_processed_table = self.pre_process_table()
 
-                self.dijkstra_distances, self.dijkstra_sortest_path = dijkstra(pre_processed_table, self.my_id)
+                    self.dijkstra_distances, self.dijkstra_sortest_path = dijkstra(pre_processed_table, self.my_id)
 
-        elif msg_type == 'send_routing':
-            # TODO: the protocol doesnt specify if the destiny and sender should be node id or jid
-            destiny = body['to']
-            sender = body['from']
-            data = body['data']
-            hops = body['hops']
+            elif msg_type == 'send_routing':
+                # TODO: the protocol doesnt specify if the destiny and sender should be node id or jid
+                destiny = body['to']
+                sender = body['from']
+                data = body['data']
+                hops = body['hops']
 
-            path = get_path(destiny, self.my_id, self.dijkstra_sortest_path)
-            next_step_id = path[0]
-            reciever_jid = self.config.node_names[next_step_id]
+                path = get_path(destiny, self.my_id, self.dijkstra_sortest_path)
+                next_step_id = path[0]
+                reciever_jid = self.config.node_names[next_step_id]
 
-            if destiny not in self.my_neighbors:
-                string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                if destiny not in self.my_neighbors:
+                    string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                    self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
+                    return
+
+                string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
                 self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
-                return
 
-            string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
-            self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
-
-        elif msg_type == 'message':
-            print("Message has been recieved!")
-            print("from: ", body['from'])
-            print("message: ", body['data'])
+            elif msg_type == 'message':
+                print("Message has been recieved!")
+                print("from: ", body['from'])
+                print("message: ", body['data'])
+        except KeyError as e:
+            print("Recieved message is not correctly formated: ")
+            print(body)
 
     def pre_process_table(self):
+        """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
         new_dict = {}
         for node_id, table_dict in self._weights.items():
             new_dict[node_id] = table_dict['table']
