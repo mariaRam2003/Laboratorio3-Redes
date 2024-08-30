@@ -198,11 +198,11 @@ class LinkStateRouting(ClientXMPP):
             return
 
         table = self._weights[node_id]['table']
-        json_table = json.loads(table)
+        json_table = json.dumps(table)
         version = self._weights[node_id]['version']
         table_jid = self.config.node_names[node_id]
 
-        string = f'{{\"type\": \"weights\", \"table\": {{ {json_table} }}, \"version\": {version}, \"from\": \"{table_jid}\" }}'
+        string = f'{{\"type\": \"weights\", \"table\": {json_table}, \"version\": {version}, \"from\": \"{table_jid}\" }}'
 
         # we broadcast to all our neighbors
         for neighbor_id in self.my_neighbors:
