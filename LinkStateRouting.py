@@ -52,7 +52,7 @@ class LinkStateRouting(ClientXMPP):
         while True:
             print("Current weights table:")
             print(self._weights)
-            destiny_id = await ainput("Ingrese el nodo destino: ")
+            destiny_id = await ainput("Ingrese el JID del nodo destino: ")
             data = await ainput("Ingrese el mensaje: ")
             sender = self.my_id
 
@@ -72,7 +72,6 @@ class LinkStateRouting(ClientXMPP):
             self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
             print(f"Message sent to {reciever_jid} from {self.my_id} with data: {data}")
 
-
     def _send_echo_message(self):
         """This message handles sending the echo messages"""
         echo_msg = '{\"type\": \"echo\"}'
@@ -81,7 +80,6 @@ class LinkStateRouting(ClientXMPP):
             self.send_message(mto=neighbor_jid, mbody=echo_msg, mtype='chat')
             self.response_times[neighbor_jid] = time.time()
             print(f"Sending echo message to neighbor: {neighbor_jid}")
-
 
     def _add_event_handlers(self):
         """We add the event handlers"""
@@ -105,7 +103,7 @@ class LinkStateRouting(ClientXMPP):
             print("unknown message type")
             print("msg body: \n", msg['body'])
             return
-        
+
         # Message's sender.
         sender = str(msg["from"])
         sender_jid = sender.split("/")[0]
@@ -199,6 +197,7 @@ class LinkStateRouting(ClientXMPP):
         except KeyError as e:
             print("Recieved message is not correctly formated: ")
             print(body)
+            print(e)
 
     def pre_process_table(self):
         """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
