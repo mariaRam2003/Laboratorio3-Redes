@@ -72,7 +72,7 @@ class LinkStateRouting(ClientXMPP):
         while True:
             print("Current weights table:")
             print(f"\t{self._weights}")
-            destiny_id = await ainput("Enter destination Node: ")
+            destiny_id = await ainput("Enter JID of destination Node: ")
             data = await ainput("Enter the message: ")
             sender = self.my_id
 
@@ -235,6 +235,7 @@ class LinkStateRouting(ClientXMPP):
         except KeyError as e:
             print("ERROR: Recieved message is not correctly formated: \n")
             print(f"\t{body}")
+            print(f"\t{e}\n")
 
     def pre_process_table(self):
         """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
