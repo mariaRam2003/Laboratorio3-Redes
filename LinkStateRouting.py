@@ -86,7 +86,7 @@ class LinkStateRouting(ClientXMPP):
             hops = 0
 
             if destiny_id not in self.my_neighbors:
-                string = f'{{\"type\": \"send_routing\", \"to\": {destiny_id} \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                string = f'{{\"type\": \"send_routing\", \"to\": \"{destiny_id}\" \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
                 self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
                 return
 
