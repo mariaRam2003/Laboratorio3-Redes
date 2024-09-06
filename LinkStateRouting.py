@@ -222,7 +222,7 @@ class LinkStateRouting(ClientXMPP):
                 reciever_jid = self.config.node_names[next_step_id]
 
                 if destiny not in self.my_neighbors:
-                    string = f'{{\"type\": \"send_routing\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
+                    string = f'{{\"type\": \"send_routing\", \"to\": \"{destiny}\" \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
                     self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
                     return
 
