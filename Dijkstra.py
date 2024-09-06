@@ -1,4 +1,5 @@
 import heapq
+from typing import Dict
 
 
 def dijkstra(graph, start):
@@ -14,6 +15,7 @@ def dijkstra(graph, start):
         shortest_path: dictionary containing the previous node in the shortest path to each node
     """
     # Inicializar
+    graph = complete_graph_with_infinity(graph)
     queue = [(0, start)]
     distances = {node: float('inf') for node in graph}
     distances[start] = 0
@@ -27,7 +29,7 @@ def dijkstra(graph, start):
         # Si la distancia actual es mayor a la distancia almacenada, continuar
         if current_distance > distances[current_node]:
             continue
-        
+
         # Recorrer vecinos
         for neighbor, weight in graph[current_node].items():
             distance = current_distance + weight
@@ -38,6 +40,17 @@ def dijkstra(graph, start):
                 shortest_path[neighbor] = current_node
 
     return distances, shortest_path
+
+
+def complete_graph_with_infinity(graph):
+    # Step 1: Identify all unique keys (nodes)
+    nodes = set(graph.keys()) | {key for value in graph.values() for key in value.keys()}
+
+    # Step 2: Create a new dictionary with n x n structure
+    complete_graph = {node: {other_node: (graph.get(node, {}).get(other_node, float('inf')))
+                             for other_node in nodes} for node in nodes}
+
+    return complete_graph
 
 
 def get_path(destination_id, start, shortest_path):

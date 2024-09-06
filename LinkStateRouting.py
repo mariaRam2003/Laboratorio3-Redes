@@ -1,4 +1,6 @@
 import asyncio
+import traceback
+
 
 from slixmpp import ClientXMPP
 from Config_Loader import NetworkConfiguration
@@ -236,6 +238,7 @@ class LinkStateRouting(ClientXMPP):
             print("ERROR: Recieved message is not correctly formated: \n")
             print(f"\t{body}")
             print(f"\t{e}\n")
+            traceback.print_exc()
 
     def pre_process_table(self):
         """This method preprocess the table in order to be used by the Dijkstra's algorithm"""
