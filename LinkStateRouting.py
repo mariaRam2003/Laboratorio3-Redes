@@ -1,7 +1,6 @@
 import asyncio
 import traceback
 
-
 from slixmpp import ClientXMPP
 from Config_Loader import NetworkConfiguration
 from Dijkstra import dijkstra, get_path
@@ -34,6 +33,7 @@ class LinkStateRouting(ClientXMPP):
         dijkstra_distances: the distances from the user to all the nodes
         dijkstra_sortest_path: the shortest path from the user to all the nodes
     """
+
     def __init__(self, jid, password, config: NetworkConfiguration):
         super().__init__(jid, password)
         print(f"LSR initialized for JID: {jid}\n")
@@ -74,7 +74,7 @@ class LinkStateRouting(ClientXMPP):
         while True:
             print("Current weights table:")
             print(f"\t{self._weights}")
-            destiny_id = await ainput("Enter JID of destination Node: ")
+            destiny_id = await ainput("Enter ID of destination Node: ")
             data = await ainput("Enter the message: ")
             sender = self.my_id
 
@@ -82,8 +82,11 @@ class LinkStateRouting(ClientXMPP):
                 print("ERROR: The destination node is not in the network\n")
                 return
 
-            reciever_jid = self.config.node_names[destiny_id]
             hops = 0
+
+            path = get_path(destiny_id, self.my_id, self.dijkstra_sortest_path)
+            next_step_id = path[0]
+            reciever_jid = self.config.node_names[next_step_id]
 
             if destiny_id not in self.my_neighbors:
                 string = f'{{\"type\": \"send_routing\", \"to\": \"{destiny_id}\", \"from\": \"{sender}\", \"data\": \"{data}\" , \"hops\": \"{hops + 1}\"}}'
@@ -93,7 +96,6 @@ class LinkStateRouting(ClientXMPP):
             string = f'{{\"type\": \"message\", \"from\": \"{sender}\", \"data\": \"{data}\" }}'
             self.send_message(mto=reciever_jid, mbody=string, mtype='chat')
             print(f"Message sent to {reciever_jid} from {self.my_id} with data: {data}\n")
-
 
     def _send_echo_message(self):
         """
@@ -107,7 +109,6 @@ class LinkStateRouting(ClientXMPP):
             self.send_message(mto=neighbor_jid, mbody=echo_msg, mtype='chat')
             self.response_times[neighbor_jid] = time.time()
             print(f"Sending echo message to neighbor: {neighbor_jid}\n")
-
 
     def _add_event_handlers(self):
         """
@@ -142,7 +143,7 @@ class LinkStateRouting(ClientXMPP):
             print("Unknown message type: ")
             print(f"\tmsg body: {msg['body']}\n")
             return
-        
+
         # Message's sender.
         sender = str(msg["from"])
         sender_jid = sender.split("/")[0]
