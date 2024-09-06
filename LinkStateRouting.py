@@ -215,7 +215,7 @@ class LinkStateRouting(ClientXMPP):
                 destiny = body['to']
                 sender = body['from']
                 data = body['data']
-                hops = body['hops']
+                hops = int(body['hops'])
 
                 path = get_path(destiny, self.my_id, self.dijkstra_sortest_path)
                 next_step_id = path[0]
